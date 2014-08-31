@@ -1,221 +1,127 @@
 package com.angad.CAEnergy
 
 import com.twitter.finatra._
-import com.twitter.finatra.ContentType._
+import org.apache.commons.csv._
+import java.io._
+import scala.collection.JavaConverters._
+import scala.collection.mutable.HashMap
 
 object App extends FinatraServer {
-  class EnergyApp extends Controller {
 
-    /**
-     * Basic Example
-     *
-     * curl http://localhost:7070/ => "hello world"
-     */
-    get("/") { request =>
-      render.static("index.html").toFuture
+  class NotFound extends Exception
+
+  class DataView(ts: Long) extends View {
+    val template = "index_view.mustache"
+    val timestamp = ts
+  }
+
+  class UtilityView(data: List[Map[String, String]]) extends View {
+    val template = "utility_view.mustache"
+    val records = data
+  }
+
+  class CountyView(e: String, data: List[String]) extends View {
+    val template = "county_view.mustache"
+    val records = data
+    val energy = e
+  }
+
+  class CountyDetailView(c: String, data: List[HashMap[String, String]]) extends View {
+    val template = "county_detail_view.mustache"
+    val records = data
+    val county = c
+  }
+
+  class PlanningareaView(data: List[Map[String, String]]) extends View {
+    val template = "planningarea_view.mustache"
+    val records = data
+  }
+
+  def cleanString(s: String) = s.trim().replaceAll("[^\\x00-\\x7F]", "").replaceAll("\"", "")
+
+  def isAllDigits(x: String) = x forall Character.isDigit
+
+  def sanitizeByCounty(data: List[Map[String, String]], county: String): List[HashMap[String, String]] = {
+    val county_data = data.filter((p: Map[String, String]) => p("County").toLowerCase == county.toLowerCase)
+    val headers = data(0).keys.toList
+    var l = List[HashMap[String, String]]()
+    for (i <- 0 to headers.length-1) {
+      if (isAllDigits(headers(i))) {
+        val h = HashMap[String, String]()
+        h("Year") = headers(i)
+        h(county_data(0)("Sector")) = county_data(0)(headers(i))
+        h(county_data(1)("Sector")) = county_data(1)(headers(i))
+        h(county_data(2)("Sector")) = county_data(2)(headers(i))
+        l = h :: l
+      }
+    }
+    l
+  }
+
+  def getData(energy: String, by: String): List[Map[String, String]] = {
+    val filename = "data/" + energy + "by" + by + ".csv"
+    var in: Reader = null
+    try {
+      in = new FileReader(filename)
+    } catch {
+      case ex: IOException => throw new NotFound
     }
 
-    //delete("/photos") { request =>
-      //render.plain("deleted!").toFuture
-    //}
+    val records = CSVFormat.EXCEL.parse(in).getRecords().asScala
+    val headers = records.head.asScala.toList.map {
+      case(s: String) => cleanString(s)
+    }
+    val rows = records.tail.toList.map {
+      case(row: CSVRecord) => row.asScala.toList.map {
+        case(s: String) => cleanString(s)
+      }
+    }
+    var l = List[Map[String, String]]()
+    for (r <- rows) l = (headers zip r).toMap :: l
+    l
+  }
 
-    /**
-     * Route parameters
-     *
-     * curl http://localhost:7070/user/dave => "hello dave"
-     */
-    //get("/user/:username") { request =>
-      //val username = request.routeParams.getOrElse("username", "default_user")
-      //render.plain("hello " + username).toFuture
-    //}
+  class EnergyApp extends Controller {
 
-    /**
-     * Setting Headers
-     *
-     * curl -I http://localhost:7070/headers => "Foo:Bar"
-     */
-    //get("/headers") { request =>
-      //render.plain("look at headers").header("Foo", "Bar").toFuture
-    //}
+    get("/") { request =>
+      render.view(new DataView(System.currentTimeMillis / 1000)).toFuture
+    }
 
-    /**
-     * Rendering json
-     *
-     * curl -I http://localhost:7070/data.json => "{foo:bar}"
-     */
-    //get("/data.json") { request =>
-      //render.json(Map("foo" -> "bar")).toFuture
-    //}
+    get("/data/:energy/:by") { request =>
+      val energy = request.routeParams.getOrElse("energy", "electricity")
+      val by = request.routeParams.getOrElse("by", "county")
+      val l = getData(energy, by)
+      by match {
+        case "utility" => render.view(new UtilityView(l)).toFuture
+        case "county" => render.view(new CountyView(energy, l.map { case (x: Map[String, String]) => x("County").toLowerCase}.distinct)).toFuture
+        case "planningarea" => render.view(new PlanningareaView(l)).toFuture
+        case _ => throw new NotFound
+      }
+    }
 
-    /**
-     * Query params
-     *
-     * curl http://localhost:7070/search?q=foo => "no results for foo"
-     */
-    //get("/search") { request =>
-      //request.params.get("q") match {
-        //case Some(q) => render.plain("no results for "+ q).toFuture
-        //case None    => render.plain("query param q needed").status(500).toFuture
-      //}
-    //}
-
-    /**
-     * Redirects
-     *
-     * curl http://localhost:7070/redirect
-     */
-    //get("/redirect") { request =>
-      //redirect("http://localhost:7070/", permanent = true).toFuture
-    //}
-
-    /**
-     * Uploading files
-     *
-     * curl -F avatar=@/path/to/img http://localhost:7070/profile
-     */
-    //post("/profile") { request =>
-      //request.multiParams.get("avatar").map { avatar =>
-        //println("content type is " + avatar.contentType)
-        //avatar.writeToFile("/tmp/avatar") //writes uploaded avatar to /tmp/avatar
-      //}
-      //render.plain("ok").toFuture
-    //}
-
-    //options("/some/resource") { request =>
-      //render.plain("usage description").toFuture
-    //}
-
-    /**
-     * Rendering views
-     *
-     * curl http://localhost:7070/template
-     */
-    //class AnView extends View {
-      //val template = "an_view.mustache"
-      //val some_val = "random value here"
-    //}
-
-    //get("/template") { request =>
-      //val anView = new AnView
-      //render.view(anView).toFuture
-    //}
+    get("/data/:energy/county/:county") { request =>
+      val energy = request.routeParams.getOrElse("energy", "electricity")
+      val county = request.routeParams.getOrElse("county", "alameda")
+      val l = getData(energy, "county")
+      val county_data = sanitizeByCounty(l, county)
+      render.view(new CountyDetailView(county, county_data)).toFuture
+    }
 
 
-    /**
-     * Custom Error Handling
-     *
-     * curl http://localhost:7070/error
-     */
-    //get("/error")   { request =>
-      //1234/0
-      //render.plain("we never make it here").toFuture
-    //}
+    error { request =>
+      request.error match {
+        case Some(e:NotFound) =>
+          render.status(404).json(Map("status" -> "not found")).toFuture
+        case _ =>
+          render.status(500).plain("Something went wrong!").toFuture
+      }
+    }
 
-    /**
-     * Custom Error Handling with custom Exception
-     *
-     * curl http://localhost:7070/unauthorized
-     */
-    //class Unauthorized extends Exception
-
-    //get("/unauthorized") { request =>
-      //throw new Unauthorized
-    //}
-
-    //error { request =>
-      //request.error match {
-        //case Some(e:ArithmeticException) =>
-          //render.status(500).plain("whoops, divide by zero!").toFuture
-        //case Some(e:Unauthorized) =>
-          //render.status(401).plain("Not Authorized!").toFuture
-        //case Some(e:UnsupportedMediaType) =>
-          //render.status(415).plain("Unsupported Media Type!").toFuture
-        //case _ =>
-          //render.status(500).plain("Something went wrong!").toFuture
-      //}
-    //}
-
-
-    /**
-     * Custom 404s
-     *
-     * curl http://localhost:7070/notfound
-     */
-    //notFound { request =>
-      //render.status(404).plain("not found yo").toFuture
-    //}
-
-    /**
-     * Arbitrary Dispatch
-     *
-     * curl http://localhost:7070/go_home
-     */
-    //get("/go_home") { request =>
-      //route.get("/")
-    //}
-
-    //get("/search_for_dogs") { request =>
-      //route.get("/search", Map("q" -> "dogs"))
-    //}
-
-    //get("/delete_photos") { request =>
-      //route.delete("/photos")
-    //}
-
-    //get("/gif") { request =>
-      //render.static("/dealwithit.gif").toFuture
-    //}
-
-    /**
-     * Dispatch based on Content-Type
-     *
-     * curl http://localhost:7070/blog/index.json
-     * curl http://localhost:7070/blog/index.html
-     */
-    //get("/blog/index.:format") { request =>
-      //respondTo(request) {
-        //case _:Html => render.html("<h1>Hello</h1>").toFuture
-        //case _:Json => render.json(Map("value" -> "hello")).toFuture
-      //}
-    //}
-
-    /**
-     * Also works without :format route using browser Accept header
-     *
-     * curl -H "Accept: text/html" http://localhost:7070/another/page
-     * curl -H "Accept: application/json" http://localhost:7070/another/page
-     * curl -H "Accept: foo/bar" http://localhost:7070/another/page
-     */
-
-    //get("/another/page") { request =>
-      //respondTo(request) {
-        //case _:Html => render.plain("an html response").toFuture
-        //case _:Json => render.plain("an json response").toFuture
-        //case _:All => render.plain("default fallback response").toFuture
-      //}
-    //}
-
-    /**
-     * Metrics are supported out of the box via Twitter's Ostrich library.
-     * More details here: https://github.com/twitter/ostrich
-     *
-     * curl http://localhost:7070/slow_thing
-     *
-     * By default a stats server is started on 9990:
-     *
-     * curl http://localhost:9990/stats.txt
-     *
-     */
-
-    //get("/slow_thing") { request =>
-      //stats.counter("slow_thing").incr
-      //stats.time("slow_thing time") {
-        //Thread.sleep(100)
-      //}
-      //render.plain("slow").toFuture
-    //}
+    notFound { request =>
+      render.status(404).plain("not found yo").toFuture
+    }
 
   }
 
-  register(new ExampleApp())
+  register(new EnergyApp())
 }

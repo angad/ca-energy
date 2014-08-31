@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>{{county}} county</title>
+    <link rel="stylesheet" type="text/css" href="/components/bootstrap/dist/css/bootstrap.css">
+</head>
+
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+      google.setOnLoadCallback(drawChart);
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+          ['Year', 'Residential', 'Non-Residential', 'Total'],
+          {{#records}}
+          ['{{Year}}', {{Residential}}, {{Non-Residential}}, {{Total}}],
+          {{/records}}
+        ]);
+
+        var options = {
+          title: ''
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+
+        chart.draw(data, options);
+      }
+    </script>
+</head>
+<body>
+<div id="chart_div" style="width: 900px; height: 500px;"></div>
+</body>
+</html>
+
