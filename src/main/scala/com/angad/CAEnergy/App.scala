@@ -32,20 +32,27 @@ object App extends FinatraServer {
     val county = c
   }
 
-  class PlanningareaView(data: List[Map[String, String]]) extends View {
+  class PlanningareaView(e: String, data: List[String]) extends View {
     val template = "planningarea_view.mustache"
     val records = data
+    val energy = e
+  }
+
+  class PlanningareaDetailView(c: String, data: List[Map[String, String]]) extends View {
+    val template = "planningarea_detail_view.mustache"
+    val records = data
+    val planningarea = c
   }
 
   def cleanString(s: String) = s.trim().replaceAll("[^\\x00-\\x7F]", "").replaceAll("\"", "")
 
   def isAllDigits(x: String) = x forall Character.isDigit
 
-  def sanitizeByCounty(data: List[Map[String, String]], county: String): List[HashMap[String, String]] = {
+  def sanitizeByCounty(data: List[Map[String, String]], county: String) = {
     val county_data = data.filter((p: Map[String, String]) => p("County").toLowerCase == county.toLowerCase)
     val headers = data(0).keys.toList
     var l = List[HashMap[String, String]]()
-    for (i <- 0 to headers.length-1) {
+    for (i <- 0 to headers.length-1)
       if (isAllDigits(headers(i))) {
         val h = HashMap[String, String]()
         h("Year") = headers(i)
@@ -54,9 +61,13 @@ object App extends FinatraServer {
         h(county_data(2)("Sector")) = county_data(2)(headers(i))
         l = h :: l
       }
-    }
     l
   }
+
+  def sanitizeByPlanningarea(data: List[Map[String, String]], planningarea: String) = {
+    data.filter((p: Map[String, String]) => p("Planning Area Description").toLowerCase == planningarea.toLowerCase)
+  }
+
 
   def getData(energy: String, by: String): List[Map[String, String]] = {
     val filename = "data/" + energy + "by" + by + ".csv"
@@ -94,7 +105,7 @@ object App extends FinatraServer {
       by match {
         case "utility" => render.view(new UtilityView(l)).toFuture
         case "county" => render.view(new CountyView(energy, l.map { case (x: Map[String, String]) => x("County").toLowerCase}.distinct)).toFuture
-        case "planningarea" => render.view(new PlanningareaView(l)).toFuture
+        case "planningarea" => render.view(new PlanningareaView(energy, l.map { case (x: Map[String, String]) => x("Planning Area Description").toLowerCase}.distinct)).toFuture
         case _ => throw new NotFound
       }
     }
@@ -107,6 +118,13 @@ object App extends FinatraServer {
       render.view(new CountyDetailView(county, county_data)).toFuture
     }
 
+    get("/data/:energy/planningarea/:planningarea") { request =>
+      val energy = request.routeParams.getOrElse("energy", "electricity")
+      val planningarea = request.routeParams.getOrElse("planningarea", "alameda")
+      val l = getData(energy, "planningarea")
+      val planningarea_data = sanitizeByPlanningarea(l, planningarea)
+      render.view(new PlanningareaDetailView(planningarea, planningarea_data)).toFuture
+    }
 
     error { request =>
       request.error match {

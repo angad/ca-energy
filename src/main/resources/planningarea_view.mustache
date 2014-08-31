@@ -1,7 +1,15 @@
-<table class="table">
-    <tr>
-        <td>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>Planning Area View</title>
+    <link rel="stylesheet" type="text/css" href="/components/bootstrap/dist/css/bootstrap.css">
+</head>
+</head>
+<body>
+{{#records}}
+<a href = "/data/{{energy}}/planningarea/{{.}}">{{.}}</a> <br/>
+{{/records}}
+</body>
+</html>
 
-        </td>
-    </tr>
-</table>

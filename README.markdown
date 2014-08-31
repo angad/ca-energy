@@ -1,44 +1,35 @@
-# CAEnergy
+# California Energy consumption data visualization
 
-Finatra requires either [maven](http://maven.apache.org/) or [sbt](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html) to build and run your app.
+An app that visualizes data from http://www.ecdms.energy.ca.gov/ using Google Charts
 
-## SBT Instructions
+Built using Finatra - A Finagle based web framework written in Scala.
 
-### Runs your app on port 7070
+# Data
 
-    sbt run
+This reposiory does not contain the data. To get the data and make it work with this project -
 
-### Testing
+* Download the data from the above website
+* Put it in data/ folder
+* rename all the files to lower case
 
-    sbt test
+Drop me an email if you have trouble getting the data.
 
-### Packaging (fatjar)
+The data contains
 
-    sbt assembly
+* Electricity and Gas consumption by
+    * County
+        * Residential
+        * Non-Residential
+    * Planning Area
+    * Utility
 
+# Current Status
 
-## Maven Instructions
+(30th Aug 2014) - Line graph for each county and planning area
 
-### Runs your app on port 7070
+# TODO
 
-    mvn scala:run
-
-### Testing
-
-    mvn test
-
-### Packaging (fatjar)
-
-    mvn package
-
-
-## Heroku
-
-### To put on heroku
-
-    heroku create
-    git push heroku master
-
-### To run anywhere else
-
-    java -jar target/*-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+* Graphs comparing each county and planning area for both Electricity and Gas
+* Ajax-ify list view
+* Implement "by Utility" consumption
+* Pi-chart for county - which county consumes the most
