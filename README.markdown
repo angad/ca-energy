@@ -2,17 +2,18 @@
 
 An app that visualizes data from http://www.ecdms.energy.ca.gov/ using Google Charts
 
-Built using Finatra - A Finagle based web framework written in Scala.
+Built using Finatra[1] - A Finagle[2] based web framework written in Scala.
+
+[1] - https://github.com/twitter/finatra
+[2] - https://github.com/twitter/finagle
 
 # Data
 
-This reposiory does not contain the data. To get the data and make it work with this project -
+This repository does not contain the data. To get the data and make it work with this project -
 
 * Download the data from the above website
 * Put it in data/ folder
 * rename all the files to lower case
-
-Drop me an email if you have trouble getting the data.
 
 The data contains
 
@@ -33,3 +34,5 @@ The data contains
 * Ajax-ify list view
 * Implement "by Utility" consumption
 * Pi-chart for county - which county consumes the most
+* Co-relation with population data
+* Heatmap of energy consumption
