@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>{{by}} View</title>
+    <link rel="stylesheet" type="text/css" href="/components/bootstrap/dist/css/bootstrap.css">
+    <script src="/components/jquery/dist/jquery.min.js"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+</head>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("#records a").click(function() {
+            var name = $(this).attr('class');
+            $.get("/data/{{energy}}/{{by}}/" + name, function(d) {
+                var dataLength = d.length;
+                $("#name").html(name);
+                for (var i = 1; i < dataLength; i++) {
+                    var arrayLength = d[i].length
+                    for (var j = 1; j < arrayLength; j++) {
+                        d[i][j] = parseFloat(d[i][j]);
+                    }
+                }
+                var data = google.visualization.arrayToDataTable(d);
+                var options = { title: $(this).attr('class') };
+                var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+                chart.draw(data, options);
+            });
+        });
+    });
+    google.load("visualization", "1", {packages:["corechart"]});
+    </script>
+<body>
+<div class = "row">
+    <div class ="col-md-1"></div>
+    <div class ="col-md-2">{{by}}</div>
+    <div id = "name" class ="col-md-8"></div>
+</div>
+<br/>
+<div class = "row">
+    <div id = "sno" class ="col-md-1"></div>
+    <div id = "records" class ="col-md-2">
+        {{#records}}
+        <a style = "cursor: pointer;" class = "{{.}}">{{.}}</a> <br/>
+        {{/records}}
+    </div>
+    <div id = "chart_div" style="width: 900px; height: 500px;" class ="col-md-8"></div>
+</div>
+</body>
+</html>

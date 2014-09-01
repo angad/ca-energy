@@ -20,28 +20,11 @@ object App extends FinatraServer {
     val records = data
   }
 
-  class CountyView(e: String, data: List[String]) extends View {
-    val template = "county_view.mustache"
+  class LinechartView(e: String, b: String, data: List[String]) extends View {
+    val template = "linechart_view.mustache"
     val records = data
     val energy = e
-  }
-
-  class CountyDetailView(c: String, data: List[HashMap[String, String]]) extends View {
-    val template = "county_detail_view.mustache"
-    val records = data
-    val county = c
-  }
-
-  class PlanningareaView(e: String, data: List[String]) extends View {
-    val template = "planningarea_view.mustache"
-    val records = data
-    val energy = e
-  }
-
-  class PlanningareaDetailView(c: String, data: List[Map[String, String]]) extends View {
-    val template = "planningarea_detail_view.mustache"
-    val records = data
-    val planningarea = c
+    val by = b
   }
 
   def cleanString(s: String) = s.trim().replaceAll("[^\\x00-\\x7F]", "").replaceAll("\"", "")
@@ -50,24 +33,31 @@ object App extends FinatraServer {
 
   def sanitizeByCounty(data: List[Map[String, String]], county: String) = {
     val county_data = data.filter((p: Map[String, String]) => p("County").toLowerCase == county.toLowerCase)
-    val headers = data(0).keys.toList
-    var l = List[HashMap[String, String]]()
-    for (i <- 0 to headers.length-1)
-      if (isAllDigits(headers(i))) {
-        val h = HashMap[String, String]()
-        h("Year") = headers(i)
-        h(county_data(0)("Sector")) = county_data(0)(headers(i))
-        h(county_data(1)("Sector")) = county_data(1)(headers(i))
-        h(county_data(2)("Sector")) = county_data(2)(headers(i))
-        l = h :: l
+    val headers = data(0).keys.toList.sorted(Ordering[String].reverse)
+    var l = List[List[String]]()
+    for (header <- headers) {
+      if (isAllDigits(header)) {
+        l = List[String](header, county_data(0)(header), county_data(1)(header), county_data(2)(header)) :: l
       }
+    }
+    l = List[String]("Year", "Non-Residential", "Residential", "Total") :: l
     l
   }
 
   def sanitizeByPlanningarea(data: List[Map[String, String]], planningarea: String) = {
-    data.filter((p: Map[String, String]) => p("Planning Area Description").toLowerCase == planningarea.toLowerCase)
+    val planningarea_data = data.filter((p: Map[String, String]) => p("Planning Area Description").toLowerCase == planningarea.toLowerCase)
+    val keys = List[String]("Year", "Residential", "Industry", "Ag & Water Pump",
+      "Total Usage", "Commercial Other", "Mining & Construction", "Commercial Building")
+    var l = List[List[String]]()
+    for (p <- planningarea_data) {
+      var k = List[String]()
+      for (key <- keys) {
+        k = p(key) :: k
+      }
+      l = k.reverse :: l
+    }
+    keys :: l
   }
-
 
   def getData(energy: String, by: String): List[Map[String, String]] = {
     val filename = "data/" + energy + "by" + by + ".csv"
@@ -104,8 +94,18 @@ object App extends FinatraServer {
       val l = getData(energy, by)
       by match {
         case "utility" => render.view(new UtilityView(l)).toFuture
-        case "county" => render.view(new CountyView(energy, l.map { case (x: Map[String, String]) => x("County").toLowerCase}.distinct)).toFuture
-        case "planningarea" => render.view(new PlanningareaView(energy, l.map { case (x: Map[String, String]) => x("Planning Area Description").toLowerCase}.distinct)).toFuture
+        case "county" => render.view(
+          new LinechartView(energy, by, l.map {
+            case (x: Map[String, String]) =>
+              x("County").toLowerCase}.distinct.sorted(Ordering[String].reverse)
+          )
+        ).toFuture
+        case "planningarea" => render.view(
+          new LinechartView(energy, by,  l.map {
+            case (x: Map[String, String]) =>
+              x("Planning Area Description").toLowerCase}.distinct
+          )
+        ).toFuture
         case _ => throw new NotFound
       }
     }
@@ -115,7 +115,7 @@ object App extends FinatraServer {
       val county = request.routeParams.getOrElse("county", "alameda")
       val l = getData(energy, "county")
       val county_data = sanitizeByCounty(l, county)
-      render.view(new CountyDetailView(county, county_data)).toFuture
+      render.json(county_data).toFuture
     }
 
     get("/data/:energy/planningarea/:planningarea") { request =>
@@ -123,7 +123,7 @@ object App extends FinatraServer {
       val planningarea = request.routeParams.getOrElse("planningarea", "alameda")
       val l = getData(energy, "planningarea")
       val planningarea_data = sanitizeByPlanningarea(l, planningarea)
-      render.view(new PlanningareaDetailView(planningarea, planningarea_data)).toFuture
+      render.json(planningarea_data).toFuture
     }
 
     error { request =>
@@ -138,7 +138,6 @@ object App extends FinatraServer {
     notFound { request =>
       render.status(404).plain("not found yo").toFuture
     }
-
   }
 
   register(new EnergyApp())
