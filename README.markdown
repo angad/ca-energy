@@ -26,13 +26,14 @@ The data contains
 
 # Current Status
 
-(30th Aug 2014) - Line graph for each county and planning area
+(31st Aug 2014) - Line graph for each county and planning area
+(1st Sept 2014) - Single view for county and planning area with ajax-if-ied charts
+
 
 # TODO
 
 * Graphs comparing each county and planning area for both Electricity and Gas
-* Ajax-ify list view
-* Implement "by Utility" consumption
+* Implement "by Entity" consumption
 * Pi-chart for county - which county consumes the most
 * Co-relation with population data
 * Heatmap of energy consumption

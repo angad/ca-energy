@@ -4,7 +4,6 @@ import com.twitter.finatra._
 import org.apache.commons.csv._
 import java.io._
 import scala.collection.JavaConverters._
-import scala.collection.mutable.HashMap
 
 object App extends FinatraServer {
 
@@ -37,7 +36,11 @@ object App extends FinatraServer {
     var l = List[List[String]]()
     for (header <- headers) {
       if (isAllDigits(header)) {
-        l = List[String](header, county_data(0)(header), county_data(1)(header), county_data(2)(header)) :: l
+        l = List[String](header,
+          county_data.filter(x => x("Sector") == "Non-Residential")(0)(header),
+          county_data.filter(x => x("Sector") == "Residential")(0)(header),
+          county_data.filter(x => x("Sector") == "Total")(0)(header)
+        ) :: l
       }
     }
     l = List[String]("Year", "Non-Residential", "Residential", "Total") :: l
